@@ -1,0 +1,187 @@
+/** TypeScript + axios のクライアントコードを生成するために swagger.json を分離・加工する */
+
+import * as _ from "lodash";
+import * as swaggerTypes from "./swaggerTypes";
+
+// 事実上のグローバル変数
+export const context = {
+  apiName: "api"
+};
+
+export function convert(o: swaggerTypes.Swagger): swaggerTypes.ConvertedSwagger {
+  const result: swaggerTypes.ConvertedSwagger = { ...o, paths: {}, definitions: {} };
+  for (let [pathKey, pathValue] of Object.entries(o.paths)) {
+    result.paths[pathKey] = convertPath(pathValue, pathKey, o.basePath);
+  }
+  for (let [defKey, defValue] of Object.entries(o.definitions)) {
+    result.definitions[defKey] = convertDefinition(defValue, defKey);
+  }
+  return result;
+}
+
+function convertPath(pathValue: swaggerTypes.Path, pathKey: string, basePath?: string): swaggerTypes.ConvertedPath {
+  const pathResult: swaggerTypes.ConvertedPath = {
+    key: pathKey,
+    basePath,
+    endpoints: {},
+    tsRefs: {}
+  };
+  for (let [epKey, epValue] of Object.entries(pathValue)) {
+    const epResult = convertEndpoint(epValue, epKey, pathKey);
+    pathResult.endpoints[epKey] = epResult;
+    pathResult.tsRefs = { ...pathResult.tsRefs, ...epResult.tsRefs };
+  }
+  return pathResult;
+}
+
+function convertEndpoint(epValue: swaggerTypes.Endpoint, epKey: string, pathKey: string): swaggerTypes.ConvertedEndpoint {
+  const capitalizedOperationId = _.capitalize(epValue.operationId[0]) + epValue.operationId.slice(1);
+  const capitalizedMethod = _.capitalize(epKey);
+  const methodSafe = epKey === "delete" ? "delete_" : epKey;
+  const responses: swaggerTypes.Dictionary<swaggerTypes.ConvertedResponse> = {};
+  let tsRefs: swaggerTypes.Dictionary<string> = {
+    apiContext: `@/api/${context.apiName}/utils/apiContext`
+  };
+  for (let [respKey, respValue] of Object.entries(epValue.responses)) {
+    responses[respKey] = convertResponse(respValue, respKey);
+    tsRefs = { ...tsRefs, ...findRefsFromProperty(responses[respKey].schema) };
+  }
+  const parameters: swaggerTypes.ConvertedParameter[] = [];
+  const exists = { path: false, query: false, body: false, formData: false };
+  const parameterExists = exists;
+  let data: { required: boolean; tsType: string } | undefined = undefined;
+  for (let parameter of epValue.parameters) {
+    (exists as any)[parameter.in] = true;
+    if (parameter.in === "body") {
+      data = {
+        ...parameter,
+        tsType: convertPropertyToTsType(parameter.schema),
+        required: parameter.required
+      };
+      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter.schema) };
+    } else {
+      const paramResult = {
+        ...parameter,
+        tsType: convertPropertyToTsType(parameter)
+      };
+      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter) };
+      parameters.push(paramResult);
+    }
+  }
+  const structuredParameters: swaggerTypes.Dictionary<swaggerTypes.ConvertedParameter[]> = {};
+  for (let parameter of parameters) {
+    structuredParameters[parameter.in] = structuredParameters[parameter.in] || [];
+    structuredParameters[parameter.in].push(parameter);
+  }
+  let pathCode = `"${pathKey}"`;
+  if (exists.path) {
+    const inner = pathKey.replace(/\{([a-zA-Z0-9\-_]+)\}/g, "$${params.path.$1}");
+    pathCode = "`" + inner + "`";
+  }
+  let dataCode = `undefined`;
+  let configCode = undefined;
+  if (exists.formData) {
+    dataCode = `objectToFormData(params.formData)`;
+    tsRefs = { ...tsRefs, objectToFormData: "@/api/utils/objectToFormData" };
+  } else if (exists.body) {
+    dataCode = `params.data`;
+  }
+  if (exists.query) {
+    configCode = `{ params: params.query }`;
+  }
+  let canSendRequestBody = epKey === "post" || epKey === "put" || epKey === "patch";
+  return {
+    ...epValue,
+    pathCode,
+    dataCode,
+    configCode,
+    method: epKey,
+    methodSafe,
+    capitalizedOperationId,
+    capitalizedMethod,
+    responses,
+    parameters,
+    structuredParameters,
+    parameterExists,
+    tsRefs,
+    data,
+    canSendRequestBody
+  };
+}
+
+function convertResponse(respValue: swaggerTypes.Response, respKey: string): swaggerTypes.ConvertedResponse {
+  const tsType = convertPropertyToTsType(respValue.schema);
+  return { ...respValue, tsType, default: respKey === "default" };
+}
+
+function convertDefinition(definition: swaggerTypes.Definition, defKey: string): swaggerTypes.ConvertedDefinition {
+  const defResult = { ...definition } as swaggerTypes.ConvertedDefinition;
+  defResult.key = defKey;
+  defResult.properties = {} as swaggerTypes.Dictionary<swaggerTypes.ConvertedProperty>;
+  defResult.tsRefs = {};
+  for (let [propKey, propValue] of Object.entries(definition.properties)) {
+    defResult.properties[propKey] = convertProperty(propValue);
+    defResult.tsRefs = {
+      ...defResult.tsRefs,
+      ...findRefsFromProperty(propValue)
+    };
+    delete defResult.tsRefs[defKey];
+  }
+  return defResult;
+}
+
+function findRefsFromProperty(property: swaggerTypes.Property): swaggerTypes.Dictionary<string> {
+  const refs = {};
+  if (property == null) {
+    return refs;
+  }
+  if ("type" in property) {
+    switch (property.type) {
+      case "array":
+        return findRefsFromProperty(property.items);
+      case "object":
+        return findRefsFromProperty(property.additionalProperties);
+      default:
+        return refs;
+    }
+  } else if ("$ref" in property) {
+    const key = property.$ref.replace("#/definitions/", "");
+    return { [key]: `@/api/${context.apiName}/definitions/${key}` };
+  }
+  return refs;
+}
+
+function convertProperty(property: swaggerTypes.Property): swaggerTypes.ConvertedProperty {
+  const tsType = convertPropertyToTsType(property);
+  return { ...property, tsType };
+}
+
+function convertPropertyToTsType(property: swaggerTypes.Property, refPrefix?: string): string {
+  if (property == null) {
+    return "any";
+  }
+  if ("type" in property) {
+    switch (property.type) {
+      case "integer":
+        return "number";
+      case "array":
+        return `(${convertPropertyToTsType(property.items)})[]`;
+      case "object":
+        return `{[k: string]: (${convertPropertyToTsType(property.additionalProperties)})}`;
+      case "boolean":
+      case "number":
+      case "string":
+        if ("enum" in property) {
+          return property.enum.map(s => `"${s}"`).join(" | ");
+        }
+        return property.type;
+      default:
+        return "any";
+    }
+  } else if ("$ref" in property) {
+    return property.$ref.replace("#/definitions/", refPrefix == null ? "" : refPrefix);
+  }
+  return "any";
+}
+
+

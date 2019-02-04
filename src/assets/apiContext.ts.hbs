@@ -1,0 +1,39 @@
+import * as axios from "axios";
+
+const baseURL = "{{{basePath}}}";
+
+const buildClient = (baseURL: string) => (config: axios.AxiosRequestConfig): axios.AxiosInstance
+  => axios.default.create({ baseURL, ...config });
+
+const defaultClient = buildClient(baseURL)({});
+
+export const apiContext = {
+  baseURL,
+  defaultClient,
+  buildClient(config: axios.AxiosRequestConfig): axios.AxiosInstance {
+    return buildClient(this.baseURL)(config);
+  },
+  rebuildDefaultClient(config: axios.AxiosRequestConfig) {
+    this.defaultClient = this.buildClient(config);
+  },
+  request(
+    url: string,
+    method: string,
+    data: any,
+    config: axios.AxiosRequestConfig,
+    client?: axios.AxiosInstance,
+  ): Promise<any> {
+    const myClient = client != null ? client : this.defaultClient;
+    return new Promise((resolve, reject) => {
+      myClient
+        .request({url, method, data, ...config})
+        .then(resp => {
+            const { status, data } = resp;
+            resolve({ status, data, rawResponse: resp });
+        })
+        .catch(reject);
+    });
+  },
+};
+
+export default apiContext;

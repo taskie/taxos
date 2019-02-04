@@ -1,0 +1,9 @@
+export default function objectToFormData(o: any) {
+  const fd = new FormData();
+  Object.entries(o).forEach(([k, v]) => {
+    if (v != null) {
+      fd.append(k, v as any);
+    }
+  });
+  return fd;
+}

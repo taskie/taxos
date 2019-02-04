@@ -1,0 +1,9 @@
+{{#each tsRefs}}
+import {{{ @key }}} from "{{{ this }}}";
+{{/each}}
+export default interface {{{ key }}} {
+  {{#each properties}}
+    {{#if description}}/** {{ description }} */{{/if}}
+    {{{ @key }}}: {{{ tsType }}};
+  {{/each}}
+}
