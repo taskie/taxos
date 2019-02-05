@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 {{#each tsRefs}}
 import {{{ @key }}} from "{{{ this }}}";
 {{/each}}
+
 export default interface {{{ key }}} {
   {{#each properties}}
     {{#if description}}/** {{ description }} */{{/if}}

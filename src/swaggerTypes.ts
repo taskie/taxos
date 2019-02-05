@@ -24,16 +24,16 @@ interface Info {
   title: string;
 }
 
-export type Path = Dictionary<Endpoint>;
+export type Path = Dictionary<Operation>;
 
 export interface ConvertedPath {
-  endpoints: Dictionary<ConvertedEndpoint>;
+  operations: Dictionary<ConvertedOperation>;
   key: string;
   basePath?: string;
   tsRefs: Dictionary<string>;
 }
 
-export interface Endpoint {
+export interface Operation {
   operationId: string;
   consumes: string[];
   produces: string[];
@@ -41,7 +41,7 @@ export interface Endpoint {
   parameters: Parameter[];
 }
 
-export type ConvertedEndpoint = Endpoint & {
+export type ConvertedOperation = Operation & {
   pathCode: string;
   dataCode: string;
   configCode?: string;

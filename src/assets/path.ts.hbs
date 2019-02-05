@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-empty-interface */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import * as axios from "axios";
 {{#each tsRefs}}
 import {{{ @key }}} from "{{{ this }}}";
 {{/each}}
 
-{{#each endpoints}}
+{{#each operations}}
   export interface {{capitalizedMethod}}Params {
     {{#each structuredParameters}}
       {{{@key}}}: { {{#each this}}
@@ -24,7 +28,7 @@ import {{{ @key }}} from "{{{ this }}}";
     status: {{{ @key }}},
     {{/unless}}
     data: {{{ tsType }}},
-    rawResponse: axios.AxiosResponse,
+    raw: axios.AxiosResponse,
   }
   {{/each}}
 
@@ -37,7 +41,13 @@ import {{{ @key }}} from "{{{ this }}}";
     }
   });
 
-  {{#if description}}/** {{ description }} */{{/if}}
+  {{#if summary}}/**
+   * {{ summary }}{{#if description}}
+   *
+   * {{ description }}{{/if}}{{#if deprecated}}
+   *
+   * @deprecated{{/if}}
+   */{{/if}}
   export const {{methodSafe}} = (params: {{{capitalizedMethod}}}Params, config: axios.AxiosRequestConfig = {}, client: axios.AxiosInstance = apiContext.defaultClient): Promise<{{{capitalizedMethod}}}Response> =>
     apiContext.request({{{ pathCode }}}, "{{method}}", {{{ dataCode }}}, { ...generate{{{capitalizedMethod}}}Config(params), ...config }, client);
 

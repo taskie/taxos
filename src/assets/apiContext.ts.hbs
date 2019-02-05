@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as axios from "axios";
 
 const baseURL = "{{{basePath}}}";
@@ -28,7 +30,7 @@ export const apiContext = {
         .request({url, method, data, ...config})
         .then(resp => {
             const { status, data } = resp;
-            resolve({ status, data, rawResponse: resp });
+            resolve({ status, data, raw: resp });
         })
         .catch(reject);
     });

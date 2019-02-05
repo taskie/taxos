@@ -8,6 +8,7 @@ import { generateDefinitionTs, generatePathTs, generateObjectToFormDataTs, gener
 import { Swagger } from "@/swaggerTypes";
 
 interface Options {
+  apiRoot: string;
   apiName: string;
   swaggerPath: string;
   outPathFilter?: string[];
@@ -21,21 +22,21 @@ function makeHeader(): string {
 `;
 }
 
-const utilMapperGenerator = (apiName: string, swagger: Swagger, src: string) => ({
-  [path.join(src, "utils", "objectToFormData.ts")]: generateObjectToFormDataTs,
-  [path.join(src, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(swagger)
+const utilMapperGenerator = (apiName: string, swagger: Swagger, src: string, apiRoot: string) => ({
+  [path.join(src, apiRoot, "utils", "objectToFormData.ts")]: generateObjectToFormDataTs,
+  [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(swagger)
 });
 
 export default function generateTsCli(opts: Options) {
-  const { apiName, swaggerPath, outPathFilter: opf, swaggerOutDir: swaggerOut, srcOutDir: src } = opts;
+  const { apiRoot, apiName, swaggerPath, outPathFilter: opf, swaggerOutDir: swaggerOut, srcOutDir: src } = opts;
   let swaggerOutDir = swaggerOut != null ? swaggerOut : "swagger";
-  const srcOutDir = src != null ? src : path.join("src", "api");
+  const srcOutDir = src != null ? src : path.join("src");
   let outPathFilter: Set<string> | undefined = undefined;
   if (opf != null) {
     outPathFilter = new Set(opf);
   }
   const swagger = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
-  const utilMapper = utilMapperGenerator(apiName, swagger, srcOutDir);
+  const utilMapper = utilMapperGenerator(apiName, swagger, srcOutDir, apiRoot);
 
   for (let [outPath, generator] of Object.entries(utilMapper)) {
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
@@ -56,7 +57,7 @@ export default function generateTsCli(opts: Options) {
     if (defPath.indexOf(swaggerOutDir) !== 0) {
       throw new Error(swaggerOutDir);
     }
-    const basePath = path.dirname(path.join(srcOutDir, defPath.slice(swaggerOutDir.length)));
+    const basePath = path.dirname(path.join(srcOutDir, apiRoot, defPath.slice(swaggerOutDir.length)));
     const outPath = path.join(basePath, "index.d.ts");
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
       continue;
@@ -73,7 +74,7 @@ export default function generateTsCli(opts: Options) {
     if (pathPath.indexOf(swaggerOutDir) !== 0) {
       throw new Error(swaggerOutDir);
     }
-    const basePath = path.dirname(path.join(srcOutDir, pathPath.slice(swaggerOutDir.length)));
+    const basePath = path.dirname(path.join(srcOutDir, apiRoot, pathPath.slice(swaggerOutDir.length)));
     const outPath = path.join(basePath, "index.ts");
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
       continue;

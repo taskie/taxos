@@ -7,6 +7,7 @@ import stringify from "json-stable-stringify";
 import { convert } from "../convertJson";
 
 interface Options {
+  apiRoot: string;
   apiName: string;
   swaggerPath: string;
   outPathFilter?: string[];
@@ -21,7 +22,7 @@ export default function convertJsonCli(opts: Options) {
     outPathFilter = new Set(opf);
   }
   const j = fs.readFileSync(swaggerPath, "utf-8");
-  const converted = convert(JSON.parse(j), { apiName: opts.apiName });
+  const converted = convert(JSON.parse(j), { apiRoot: opts.apiRoot, apiName: opts.apiName });
   for (let [pathKey, pathValue] of Object.entries(converted.paths)) {
     let fullPath = converted.basePath == null ? pathKey : path.join(converted.basePath, pathKey);
     fullPath = fullPath.replace(/\{([a-zA-Z0-9\-_]+)\}/g, "$$$1");

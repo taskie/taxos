@@ -4,14 +4,13 @@ import * as _ from "lodash";
 import * as swaggerTypes from "./swaggerTypes";
 
 interface ConverterContext {
+  apiRoot: string;
   apiName: string;
-  refPrefix: string;
 }
 
-// 事実上のグローバル変数
 export const defaultContext: ConverterContext = {
-  apiName: "api",
-  refPrefix: ""
+  apiRoot: "api",
+  apiName: "api"
 };
 
 export function convert(
@@ -38,29 +37,29 @@ function convertPath(
   const pathResult: swaggerTypes.ConvertedPath = {
     key: pathKey,
     basePath,
-    endpoints: {},
+    operations: {},
     tsRefs: {}
   };
   for (let [epKey, epValue] of Object.entries(pathValue)) {
-    const epResult = convertEndpoint(epValue, epKey, pathKey, ctx);
-    pathResult.endpoints[epKey] = epResult;
+    const epResult = convertOperation(epValue, epKey, pathKey, ctx);
+    pathResult.operations[epKey] = epResult;
     pathResult.tsRefs = { ...pathResult.tsRefs, ...epResult.tsRefs };
   }
   return pathResult;
 }
 
-function convertEndpoint(
-  epValue: swaggerTypes.Endpoint,
+function convertOperation(
+  epValue: swaggerTypes.Operation,
   epKey: string,
   pathKey: string,
   ctx: ConverterContext
-): swaggerTypes.ConvertedEndpoint {
+): swaggerTypes.ConvertedOperation {
   const capitalizedOperationId = _.capitalize(epValue.operationId[0]) + epValue.operationId.slice(1);
   const capitalizedMethod = _.capitalize(epKey);
   const methodSafe = epKey === "delete" ? "delete_" : epKey;
   const responses: swaggerTypes.Dictionary<swaggerTypes.ConvertedResponse> = {};
   let tsRefs: swaggerTypes.Dictionary<string> = {
-    apiContext: `@/api/${ctx.apiName}/utils/apiContext`
+    apiContext: `@/${ctx.apiRoot}/${ctx.apiName}/utils/apiContext`
   };
   for (let [respKey, respValue] of Object.entries(epValue.responses)) {
     responses[respKey] = convertResponse(respValue, respKey, ctx);
@@ -102,7 +101,7 @@ function convertEndpoint(
   let configCode = undefined;
   if (exists.formData) {
     dataCode = `objectToFormData(params.formData)`;
-    tsRefs = { ...tsRefs, objectToFormData: "@/api/utils/objectToFormData" };
+    tsRefs = { ...tsRefs, objectToFormData: `@/${ctx.apiRoot}/utils/objectToFormData` };
   } else if (exists.body) {
     dataCode = `params.data`;
   }
@@ -173,7 +172,7 @@ function findRefsFromProperty(property: swaggerTypes.Property, ctx: ConverterCon
     }
   } else if ("$ref" in property) {
     const key = property.$ref.replace("#/definitions/", "");
-    return { [key]: `@/api/${ctx.apiName}/definitions/${key}` };
+    return { [key]: `@/${ctx.apiRoot}/${ctx.apiName}/definitions/${key}` };
   }
   return refs;
 }
@@ -206,7 +205,7 @@ function convertPropertyToTsType(property: swaggerTypes.Property, ctx: Converter
         return "any";
     }
   } else if ("$ref" in property) {
-    return property.$ref.replace("#/definitions/", ctx.refPrefix == null ? "" : ctx.refPrefix);
+    return property.$ref.replace("#/definitions/", "");
   }
   return "any";
 }
