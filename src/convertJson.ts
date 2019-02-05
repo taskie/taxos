@@ -1,6 +1,5 @@
 /** TypeScript + axios のクライアントコードを生成するために swagger.json を分離・加工する */
 
-import * as _ from "lodash";
 import * as swaggerTypes from "./swaggerTypes";
 
 interface ConverterContext {
@@ -48,14 +47,21 @@ function convertPath(
   return pathResult;
 }
 
+function capitalize(s: string): string {
+  if (s.length === 0) {
+    return s;
+  }
+  return s[0].toUpperCase() + s.slice(1);
+}
+
 function convertOperation(
   epValue: swaggerTypes.Operation,
   epKey: string,
   pathKey: string,
   ctx: ConverterContext
 ): swaggerTypes.ConvertedOperation {
-  const capitalizedOperationId = _.capitalize(epValue.operationId[0]) + epValue.operationId.slice(1);
-  const capitalizedMethod = _.capitalize(epKey);
+  const capitalizedOperationId = capitalize(epValue.operationId);
+  const capitalizedMethod = capitalize(epKey);
   const methodSafe = epKey === "delete" ? "delete_" : epKey;
   const responses: swaggerTypes.Dictionary<swaggerTypes.ConvertedResponse> = {};
   let tsRefs: swaggerTypes.Dictionary<string> = {
