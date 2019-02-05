@@ -22,7 +22,19 @@ export default function convertJsonCli(opts: Options) {
     outPathFilter = new Set(opf);
   }
   const j = fs.readFileSync(swaggerPath, "utf-8");
+
   const converted = convert(JSON.parse(j), { apiRoot: opts.apiRoot, apiName: opts.apiName });
+
+  {
+    const { baseURL } = converted;
+    let apiInfo = { baseURL };
+    let dir = path.join(swaggerOutDir, apiName);
+    const outPath = path.join(dir, "spec.json");
+    console.log(`${swaggerPath} -> ${outPath}`);
+    mkdirp.sync(dir);
+    fs.writeFileSync(outPath, stringify(apiInfo, { space: 2 }));
+  }
+
   for (let [pathKey, pathValue] of Object.entries(converted.paths)) {
     let fullPath = converted.basePath == null ? pathKey : path.join(converted.basePath, pathKey);
     fullPath = fullPath.replace(/\{([a-zA-Z0-9\-_]+)\}/g, "$$$1");
@@ -35,6 +47,7 @@ export default function convertJsonCli(opts: Options) {
     mkdirp.sync(dir);
     fs.writeFileSync(outPath, stringify(pathValue, { space: 2 }));
   }
+
   for (let [defKey, defValue] of Object.entries(converted.definitions)) {
     let definition = path.join(swaggerOutDir, apiName, "definitions", defKey);
     let outPath = path.join(definition, "spec.json");

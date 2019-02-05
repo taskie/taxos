@@ -16,8 +16,9 @@ export function convert(
   o: swaggerTypes.Swagger,
   ctx: Partial<ConverterContext> = defaultContext
 ): swaggerTypes.ConvertedSwagger {
-  const result: swaggerTypes.ConvertedSwagger = { ...o, paths: {}, definitions: {} };
   const mergedContext = { ...defaultContext, ...ctx };
+  const baseURL = buildBaseURL(o, mergedContext);
+  const result: swaggerTypes.ConvertedSwagger = { ...o, baseURL, paths: {}, definitions: {} };
   for (let [pathKey, pathValue] of Object.entries(o.paths)) {
     result.paths[pathKey] = convertPath(pathValue, pathKey, o.basePath, mergedContext);
   }
@@ -25,6 +26,23 @@ export function convert(
     result.definitions[defKey] = convertDefinition(defValue, defKey, mergedContext);
   }
   return result;
+}
+
+function buildBaseURL(o: swaggerTypes.Swagger, ctx: ConverterContext): string {
+  let { host, schemes } = o;
+  let basePath = o.basePath != null ? o.basePath : "/";
+  if (basePath[0] != "/") {
+    basePath = "/" + basePath;
+  }
+  let baseURL = basePath;
+  if (host != null) {
+    let scheme = "http";
+    if (schemes != null && schemes.includes("https")) {
+      scheme = "https";
+    }
+    baseURL = `${scheme}://${host}${basePath}`;
+  }
+  return baseURL;
 }
 
 function convertPath(

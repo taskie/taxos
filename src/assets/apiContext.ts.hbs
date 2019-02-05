@@ -2,7 +2,7 @@
 
 import * as axios from "axios";
 
-const baseURL = "{{{basePath}}}";
+const baseURL = "{{{baseURL}}}";
 
 const buildClient = (baseURL: string) => (config: axios.AxiosRequestConfig): axios.AxiosInstance => axios.default.create({ baseURL, ...config });
 

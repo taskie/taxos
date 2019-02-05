@@ -5,12 +5,11 @@ import * as path from "path";
 import * as mkdirp from "mkdirp";
 import * as glob from "glob";
 import { generateDefinitionTs, generatePathTs, generateObjectToFormDataTs, generateApiContextTs } from "@/generateTs";
-import { Swagger } from "@/swaggerTypes";
+import { ConvertedAPISpec } from "@/swaggerTypes";
 
 interface Options {
   apiRoot: string;
   apiName: string;
-  swaggerPath: string;
   outPathFilter?: string[];
   swaggerOutDir?: string;
   srcOutDir?: string;
@@ -22,21 +21,22 @@ function makeHeader(): string {
 `;
 }
 
-const utilMapperGenerator = (apiName: string, swagger: Swagger, src: string, apiRoot: string) => ({
+const utilMapperGenerator = (apiName: string, apiSpec: ConvertedAPISpec, src: string, apiRoot: string) => ({
   [path.join(src, apiRoot, "utils", "objectToFormData.ts")]: generateObjectToFormDataTs,
-  [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(swagger)
+  [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(apiSpec)
 });
 
 export default function generateTsCli(opts: Options) {
-  const { apiRoot, apiName, swaggerPath, outPathFilter: opf, swaggerOutDir: swaggerOut, srcOutDir: src } = opts;
+  const { apiRoot, apiName, outPathFilter: opf, swaggerOutDir: swaggerOut, srcOutDir: src } = opts;
   let swaggerOutDir = swaggerOut != null ? swaggerOut : "swagger";
   const srcOutDir = src != null ? src : path.join("src");
   let outPathFilter: Set<string> | undefined = undefined;
   if (opf != null) {
     outPathFilter = new Set(opf);
   }
-  const swagger = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
-  const utilMapper = utilMapperGenerator(apiName, swagger, srcOutDir, apiRoot);
+  const apiSpecPath = path.join(swaggerOutDir, apiName, "spec.json");
+  const apiSpec = JSON.parse(fs.readFileSync(apiSpecPath, "utf-8"));
+  const utilMapper = utilMapperGenerator(apiName, apiSpec, srcOutDir, apiRoot);
 
   for (let [outPath, generator] of Object.entries(utilMapper)) {
     if (outPathFilter != null && !outPathFilter.has(outPath)) {

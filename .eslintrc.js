@@ -8,6 +8,7 @@ module.exports = {
   rules: {
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "args": "none" }],
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/prefer-interface": "off",
     "no-use-before-define": "off",

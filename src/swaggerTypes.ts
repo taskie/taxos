@@ -5,18 +5,27 @@ export interface Dictionary<T> {
 /** swagger.json の型 */
 export interface Swagger {
   swagger: string;
-  info: Info;
-  basePath: string;
+  info?: Info;
+  host?: string;
+  basePath?: string;
+  schemes?: string[];
   paths: Dictionary<Path>;
   definitions: Dictionary<Definition>;
 }
 
 export interface ConvertedSwagger {
   swagger: string;
-  info: Info;
-  basePath: string;
+  info?: Info;
+  host?: string;
+  basePath?: string;
+  schemes?: string[];
+  baseURL: string;
   paths: Dictionary<ConvertedPath>;
   definitions: Dictionary<ConvertedDefinition>;
+}
+
+export interface ConvertedAPISpec {
+  baseURL: string;
 }
 
 interface Info {
