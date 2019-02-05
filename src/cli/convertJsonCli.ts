@@ -4,13 +4,13 @@ import * as fs from "fs";
 import * as path from "path";
 import * as mkdirp from "mkdirp";
 import stringify from "json-stable-stringify";
-import { context, convert } from "../convertJson";
+import { convert } from "../convertJson";
 
 interface Options {
-  apiName: string,
-  swaggerPath: string,
-  outPathFilter?: string[],
-  swaggerOutDir?: string,
+  apiName: string;
+  swaggerPath: string;
+  outPathFilter?: string[];
+  swaggerOutDir?: string;
 }
 
 export default function convertJsonCli(opts: Options) {
@@ -21,7 +21,7 @@ export default function convertJsonCli(opts: Options) {
     outPathFilter = new Set(opf);
   }
   const j = fs.readFileSync(swaggerPath, "utf-8");
-  const converted = convert(JSON.parse(j));
+  const converted = convert(JSON.parse(j), { apiName: opts.apiName });
   for (let [pathKey, pathValue] of Object.entries(converted.paths)) {
     let fullPath = converted.basePath == null ? pathKey : path.join(converted.basePath, pathKey);
     fullPath = fullPath.replace(/\{([a-zA-Z0-9\-_]+)\}/g, "$$$1");
@@ -44,4 +44,4 @@ export default function convertJsonCli(opts: Options) {
     mkdirp.sync(definition);
     fs.writeFileSync(outPath, stringify(defValue, { space: 2 }));
   }
-};
+}

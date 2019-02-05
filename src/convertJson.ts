@@ -3,23 +3,38 @@
 import * as _ from "lodash";
 import * as swaggerTypes from "./swaggerTypes";
 
+interface ConverterContext {
+  apiName: string;
+  refPrefix: string;
+}
+
 // 事実上のグローバル変数
-export const context = {
-  apiName: "api"
+export const defaultContext: ConverterContext = {
+  apiName: "api",
+  refPrefix: ""
 };
 
-export function convert(o: swaggerTypes.Swagger): swaggerTypes.ConvertedSwagger {
+export function convert(
+  o: swaggerTypes.Swagger,
+  ctx: Partial<ConverterContext> = defaultContext
+): swaggerTypes.ConvertedSwagger {
   const result: swaggerTypes.ConvertedSwagger = { ...o, paths: {}, definitions: {} };
+  const mergedContext = { ...defaultContext, ...ctx };
   for (let [pathKey, pathValue] of Object.entries(o.paths)) {
-    result.paths[pathKey] = convertPath(pathValue, pathKey, o.basePath);
+    result.paths[pathKey] = convertPath(pathValue, pathKey, o.basePath, mergedContext);
   }
   for (let [defKey, defValue] of Object.entries(o.definitions)) {
-    result.definitions[defKey] = convertDefinition(defValue, defKey);
+    result.definitions[defKey] = convertDefinition(defValue, defKey, mergedContext);
   }
   return result;
 }
 
-function convertPath(pathValue: swaggerTypes.Path, pathKey: string, basePath?: string): swaggerTypes.ConvertedPath {
+function convertPath(
+  pathValue: swaggerTypes.Path,
+  pathKey: string,
+  basePath: string | undefined,
+  ctx: ConverterContext
+): swaggerTypes.ConvertedPath {
   const pathResult: swaggerTypes.ConvertedPath = {
     key: pathKey,
     basePath,
@@ -27,24 +42,29 @@ function convertPath(pathValue: swaggerTypes.Path, pathKey: string, basePath?: s
     tsRefs: {}
   };
   for (let [epKey, epValue] of Object.entries(pathValue)) {
-    const epResult = convertEndpoint(epValue, epKey, pathKey);
+    const epResult = convertEndpoint(epValue, epKey, pathKey, ctx);
     pathResult.endpoints[epKey] = epResult;
     pathResult.tsRefs = { ...pathResult.tsRefs, ...epResult.tsRefs };
   }
   return pathResult;
 }
 
-function convertEndpoint(epValue: swaggerTypes.Endpoint, epKey: string, pathKey: string): swaggerTypes.ConvertedEndpoint {
+function convertEndpoint(
+  epValue: swaggerTypes.Endpoint,
+  epKey: string,
+  pathKey: string,
+  ctx: ConverterContext
+): swaggerTypes.ConvertedEndpoint {
   const capitalizedOperationId = _.capitalize(epValue.operationId[0]) + epValue.operationId.slice(1);
   const capitalizedMethod = _.capitalize(epKey);
   const methodSafe = epKey === "delete" ? "delete_" : epKey;
   const responses: swaggerTypes.Dictionary<swaggerTypes.ConvertedResponse> = {};
   let tsRefs: swaggerTypes.Dictionary<string> = {
-    apiContext: `@/api/${context.apiName}/utils/apiContext`
+    apiContext: `@/api/${ctx.apiName}/utils/apiContext`
   };
   for (let [respKey, respValue] of Object.entries(epValue.responses)) {
-    responses[respKey] = convertResponse(respValue, respKey);
-    tsRefs = { ...tsRefs, ...findRefsFromProperty(responses[respKey].schema) };
+    responses[respKey] = convertResponse(respValue, respKey, ctx);
+    tsRefs = { ...tsRefs, ...findRefsFromProperty(responses[respKey].schema, ctx) };
   }
   const parameters: swaggerTypes.ConvertedParameter[] = [];
   const exists = { path: false, query: false, body: false, formData: false };
@@ -55,16 +75,16 @@ function convertEndpoint(epValue: swaggerTypes.Endpoint, epKey: string, pathKey:
     if (parameter.in === "body") {
       data = {
         ...parameter,
-        tsType: convertPropertyToTsType(parameter.schema),
+        tsType: convertPropertyToTsType(parameter.schema, ctx),
         required: parameter.required
       };
-      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter.schema) };
+      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter.schema, ctx) };
     } else {
       const paramResult = {
         ...parameter,
-        tsType: convertPropertyToTsType(parameter)
+        tsType: convertPropertyToTsType(parameter, ctx)
       };
-      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter) };
+      tsRefs = { ...tsRefs, ...findRefsFromProperty(parameter, ctx) };
       parameters.push(paramResult);
     }
   }
@@ -109,28 +129,35 @@ function convertEndpoint(epValue: swaggerTypes.Endpoint, epKey: string, pathKey:
   };
 }
 
-function convertResponse(respValue: swaggerTypes.Response, respKey: string): swaggerTypes.ConvertedResponse {
-  const tsType = convertPropertyToTsType(respValue.schema);
+function convertResponse(
+  respValue: swaggerTypes.Response,
+  respKey: string,
+  ctx: ConverterContext
+): swaggerTypes.ConvertedResponse {
+  const tsType = convertPropertyToTsType(respValue.schema, ctx);
   return { ...respValue, tsType, default: respKey === "default" };
 }
 
-function convertDefinition(definition: swaggerTypes.Definition, defKey: string): swaggerTypes.ConvertedDefinition {
-  const defResult = { ...definition } as swaggerTypes.ConvertedDefinition;
-  defResult.key = defKey;
-  defResult.properties = {} as swaggerTypes.Dictionary<swaggerTypes.ConvertedProperty>;
-  defResult.tsRefs = {};
+function convertDefinition(
+  definition: swaggerTypes.Definition,
+  defKey: string,
+  ctx: ConverterContext
+): swaggerTypes.ConvertedDefinition {
+  const key = defKey;
+  const properties: swaggerTypes.Dictionary<swaggerTypes.ConvertedProperty> = {};
+  let tsRefs: swaggerTypes.Dictionary<string> = {};
   for (let [propKey, propValue] of Object.entries(definition.properties)) {
-    defResult.properties[propKey] = convertProperty(propValue);
-    defResult.tsRefs = {
-      ...defResult.tsRefs,
-      ...findRefsFromProperty(propValue)
+    properties[propKey] = convertProperty(propValue, ctx);
+    tsRefs = {
+      ...tsRefs,
+      ...findRefsFromProperty(propValue, ctx)
     };
-    delete defResult.tsRefs[defKey];
   }
-  return defResult;
+  delete tsRefs[defKey];
+  return { ...definition, key, properties, tsRefs };
 }
 
-function findRefsFromProperty(property: swaggerTypes.Property): swaggerTypes.Dictionary<string> {
+function findRefsFromProperty(property: swaggerTypes.Property, ctx: ConverterContext): swaggerTypes.Dictionary<string> {
   const refs = {};
   if (property == null) {
     return refs;
@@ -138,25 +165,25 @@ function findRefsFromProperty(property: swaggerTypes.Property): swaggerTypes.Dic
   if ("type" in property) {
     switch (property.type) {
       case "array":
-        return findRefsFromProperty(property.items);
+        return findRefsFromProperty(property.items, ctx);
       case "object":
-        return findRefsFromProperty(property.additionalProperties);
+        return findRefsFromProperty(property.additionalProperties, ctx);
       default:
         return refs;
     }
   } else if ("$ref" in property) {
     const key = property.$ref.replace("#/definitions/", "");
-    return { [key]: `@/api/${context.apiName}/definitions/${key}` };
+    return { [key]: `@/api/${ctx.apiName}/definitions/${key}` };
   }
   return refs;
 }
 
-function convertProperty(property: swaggerTypes.Property): swaggerTypes.ConvertedProperty {
-  const tsType = convertPropertyToTsType(property);
+function convertProperty(property: swaggerTypes.Property, ctx: ConverterContext): swaggerTypes.ConvertedProperty {
+  const tsType = convertPropertyToTsType(property, ctx);
   return { ...property, tsType };
 }
 
-function convertPropertyToTsType(property: swaggerTypes.Property, refPrefix?: string): string {
+function convertPropertyToTsType(property: swaggerTypes.Property, ctx: ConverterContext): string {
   if (property == null) {
     return "any";
   }
@@ -165,9 +192,9 @@ function convertPropertyToTsType(property: swaggerTypes.Property, refPrefix?: st
       case "integer":
         return "number";
       case "array":
-        return `(${convertPropertyToTsType(property.items)})[]`;
+        return `(${convertPropertyToTsType(property.items, ctx)})[]`;
       case "object":
-        return `{[k: string]: (${convertPropertyToTsType(property.additionalProperties)})}`;
+        return `{[k: string]: (${convertPropertyToTsType(property.additionalProperties, ctx)})}`;
       case "boolean":
       case "number":
       case "string":
@@ -179,9 +206,7 @@ function convertPropertyToTsType(property: swaggerTypes.Property, refPrefix?: st
         return "any";
     }
   } else if ("$ref" in property) {
-    return property.$ref.replace("#/definitions/", refPrefix == null ? "" : refPrefix);
+    return property.$ref.replace("#/definitions/", ctx.refPrefix == null ? "" : ctx.refPrefix);
   }
   return "any";
 }
-
-

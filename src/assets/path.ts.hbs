@@ -32,7 +32,7 @@ import {{{ @key }}} from "{{{ this }}}";
     headers: {
       {{#if structuredParameters.header}}headers: params.header,{{/if}}
       {{#if consumes}}"content-type": "{{{ consumes.[0] }}}",{{/if}}
-      {{#if produces}}expect: "{{{ produces.[0] }}}",{{/if}}
+      {{#if produces}}accept: "{{#each produces}}{{{ this }}}{{#unless @last}}, {{/unless}}{{/each}}",{{/if}}
       {{#if configCode}}...{{{ configCode }}},{{/if}}
     }
   });

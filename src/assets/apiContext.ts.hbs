@@ -2,8 +2,7 @@ import * as axios from "axios";
 
 const baseURL = "{{{basePath}}}";
 
-const buildClient = (baseURL: string) => (config: axios.AxiosRequestConfig): axios.AxiosInstance
-  => axios.default.create({ baseURL, ...config });
+const buildClient = (baseURL: string) => (config: axios.AxiosRequestConfig): axios.AxiosInstance => axios.default.create({ baseURL, ...config });
 
 const defaultClient = buildClient(baseURL)({});
 
