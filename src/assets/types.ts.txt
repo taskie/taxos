@@ -1,0 +1,42 @@
+import * as axios from "axios";
+
+export type APIBackend<T = any, R = any> = ((
+  params: APIParams<T>,
+  config?: axios.AxiosRequestConfig,
+  client?: axios.AxiosInstance,
+) => Promise<APIResponse<R>>) & { taxos?: { path: string; method: string } };
+
+export type APIParams<T = any> = {
+  path?: { [k: string]: any };
+  query?: { [k: string]: any };
+  data?: T;
+};
+
+export type APIResponse<R = any> = {
+  status: number;
+  data?: R;
+  raw: axios.AxiosResponse;
+};
+
+export type APIRequestFunc<T = any, R = any> = (
+  url: string,
+  method: string,
+  data: T,
+  config: axios.AxiosRequestConfig,
+  client?: axios.AxiosInstance,
+) => Promise<R>;
+
+export type APIContext = {
+  baseURL: string;
+  defaultClient: axios.AxiosInstance;
+  buildClient(config: axios.AxiosRequestConfig): axios.AxiosInstance;
+  rebuildDefaultClient(config: axios.AxiosRequestConfig): void;
+  onRebuildDefaultClient: ((ctx: APIContext) => void) | undefined;
+  request(
+    url: string,
+    method: string,
+    data: any,
+    config: axios.AxiosRequestConfig,
+    client?: axios.AxiosInstance,
+  ): Promise<any>;
+};

@@ -4,6 +4,7 @@
 import {{{ @key }}} from "{{{ this }}}";
 {{/each}}
 
+{{#if description}}/** {{ description }} */{{/if}}
 export default interface {{{ key }}} {
   {{#each properties}}
     {{#if description}}/** {{ description }} */{{/if}}

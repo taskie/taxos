@@ -1,6 +1,7 @@
 import * as commander from "commander";
 import * as fs from "fs";
 
+import oasConvertJsonCli from "./oasConvertJsonCli";
 import convertJsonCli from "./convertJsonCli";
 import generateTsCli from "./generateTsCli";
 
@@ -9,13 +10,18 @@ const program = commander
   .parse(process.argv);
 
 let config = {
+  oas: false,
   mode: "both",
   apiRoot: "api",
   apiName: "main",
   swaggerPath: "swagger.json",
   outPathFilter: undefined,
   swaggerOutDir: "swagger",
-  srcOutDir: "src"
+  srcOutDir: "src",
+  pathParamReplaceValue: "_$1",
+  preferDirectory: true,
+  useApiBasePath: false,
+  packageRoot: "@",
 };
 
 if (program.config != null) {
@@ -23,10 +29,14 @@ if (program.config != null) {
   config = { ...config, ...jsonConfig };
 }
 
-if (config.mode === "json" || config.mode === "both") {
-  convertJsonCli(config);
-}
+if (config.oas) {
+  oasConvertJsonCli(config);
+} else {
+  if (config.mode === "json" || config.mode === "both") {
+    convertJsonCli(config);
+  }
 
-if (config.mode === "ts" || config.mode === "both") {
-  generateTsCli(config);
+  if (config.mode === "ts" || config.mode === "both") {
+    generateTsCli(config);
+  }
 }

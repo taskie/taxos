@@ -37,8 +37,8 @@ import {{{ @key }}} from "{{{ this }}}";
       {{#if structuredParameters.header}}headers: params.header,{{/if}}
       {{#if consumes}}"content-type": "{{{ consumes.[0] }}}",{{/if}}
       {{#if produces}}accept: "{{#each produces}}{{{ this }}}{{#unless @last}}, {{/unless}}{{/each}}",{{/if}}
-      {{#if configCode}}...{{{ configCode }}},{{/if}}
-    }
+    },
+    {{#if configCode}}...{{{ configCode }}},{{/if}}
   });
 
   {{#if summary}}/**
@@ -48,7 +48,14 @@ import {{{ @key }}} from "{{{ this }}}";
    *
    * @deprecated{{/if}}
    */{{/if}}
-  export const {{methodSafe}} = (params: {{{capitalizedMethod}}}Params, config: axios.AxiosRequestConfig = {}, client: axios.AxiosInstance = apiContext.defaultClient): Promise<{{{capitalizedMethod}}}Response> =>
-    apiContext.request({{{ pathCode }}}, "{{method}}", {{{ dataCode }}}, { ...generate{{{capitalizedMethod}}}Config(params), ...config }, client);
+  export const {{methodSafe}} = Object.assign(
+    (
+      params: {{{capitalizedMethod}}}Params,
+      config: axios.AxiosRequestConfig = {},
+      client: axios.AxiosInstance = apiContext.defaultClient
+    ): Promise<{{{capitalizedMethod}}}Response> =>
+      apiContext.request({{{ pathCode }}}, "{{method}}", {{{ dataCode }}}, { ...generate{{{capitalizedMethod}}}Config(params), ...config }, client),
+      { taxos: { path: "{{ pathKey }}", method: "{{method}}" } },
+  );
 
 {{/each}}

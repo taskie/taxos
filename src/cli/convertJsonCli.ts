@@ -12,6 +12,9 @@ interface Options {
   swaggerPath: string;
   outPathFilter?: string[];
   swaggerOutDir?: string;
+  pathParamReplaceValue?: string;
+  useApiBasePath?: boolean;
+  packageRoot?: string;
 }
 
 export default function convertJsonCli(opts: Options) {
@@ -22,8 +25,14 @@ export default function convertJsonCli(opts: Options) {
     outPathFilter = new Set(opf);
   }
   const j = fs.readFileSync(swaggerPath, "utf-8");
+  const pathParamReplaceValue = opts.pathParamReplaceValue || "_$1";
+  const useApiBasePath = !!opts.useApiBasePath;
 
-  const converted = convert(JSON.parse(j), { apiRoot: opts.apiRoot, apiName: opts.apiName });
+  const converted = convert(JSON.parse(j), {
+    apiRoot: opts.apiRoot,
+    apiName: opts.apiName,
+    packageRoot: opts.packageRoot,
+  });
 
   {
     const { baseURL } = converted;
@@ -36,8 +45,11 @@ export default function convertJsonCli(opts: Options) {
   }
 
   for (let [pathKey, pathValue] of Object.entries(converted.paths)) {
-    let fullPath = converted.basePath == null ? pathKey : path.join(converted.basePath, pathKey);
-    fullPath = fullPath.replace(/\{([a-zA-Z0-9\-_]+)\}/g, "$$$1");
+    let fullPath = pathKey;
+    if (useApiBasePath && converted.basePath != null) {
+      fullPath = path.join(converted.basePath, pathKey);
+    }
+    fullPath = fullPath.replace(/\{([a-zA-Z0-9\-_]+)\}/g, pathParamReplaceValue);
     let dir = path.join(swaggerOutDir, apiName, "paths", fullPath);
     const outPath = path.join(dir, "spec.json");
     if (outPathFilter != null && !outPathFilter.has(outPath)) {

@@ -1,4 +1,5 @@
 import objectToFormDataTs from "@/assets/objectToFormData.ts.txt";
+import typesTs from "@/assets/types.ts.txt";
 import apiContextTemplate from "@/assets/apiContext.ts.hbs";
 import definitionTemplate from "@/assets/definition.ts.hbs";
 import pathTemplate from "@/assets/path.ts.hbs";
@@ -6,6 +7,10 @@ import { ConvertedDefinition, ConvertedPath, ConvertedAPISpec } from "./swaggerT
 
 export function generateObjectToFormDataTs(): string {
   return objectToFormDataTs;
+}
+
+export function generateTypesTs(): string {
+  return typesTs;
 }
 
 export function generateApiContextTs(apiSpec: ConvertedAPISpec): string {

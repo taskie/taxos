@@ -4,7 +4,13 @@ import * as fs from "fs";
 import * as path from "path";
 import * as mkdirp from "mkdirp";
 import * as glob from "glob";
-import { generateDefinitionTs, generatePathTs, generateObjectToFormDataTs, generateApiContextTs } from "@/generateTs";
+import {
+  generateDefinitionTs,
+  generatePathTs,
+  generateObjectToFormDataTs,
+  generateApiContextTs,
+  generateTypesTs,
+} from "@/generateTs";
 import { ConvertedAPISpec } from "@/swaggerTypes";
 
 interface Options {
@@ -13,6 +19,7 @@ interface Options {
   outPathFilter?: string[];
   swaggerOutDir?: string;
   srcOutDir?: string;
+  preferDirectory?: boolean;
 }
 
 function makeHeader(): string {
@@ -23,7 +30,8 @@ function makeHeader(): string {
 
 const utilMapperGenerator = (apiName: string, apiSpec: ConvertedAPISpec, src: string, apiRoot: string) => ({
   [path.join(src, apiRoot, "utils", "objectToFormData.ts")]: generateObjectToFormDataTs,
-  [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(apiSpec)
+  [path.join(src, apiRoot, "utils", "types.ts")]: generateTypesTs,
+  [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(apiSpec),
 });
 
 export default function generateTsCli(opts: Options) {
@@ -37,6 +45,7 @@ export default function generateTsCli(opts: Options) {
   const apiSpecPath = path.join(swaggerOutDir, apiName, "spec.json");
   const apiSpec = JSON.parse(fs.readFileSync(apiSpecPath, "utf-8"));
   const utilMapper = utilMapperGenerator(apiName, apiSpec, srcOutDir, apiRoot);
+  const preferDirectory = !!opts.preferDirectory;
 
   for (let [outPath, generator] of Object.entries(utilMapper)) {
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
@@ -58,7 +67,7 @@ export default function generateTsCli(opts: Options) {
       throw new Error(swaggerOutDir);
     }
     const basePath = path.dirname(path.join(srcOutDir, apiRoot, defPath.slice(swaggerOutDir.length)));
-    const outPath = path.join(basePath, "index.d.ts");
+    const outPath = preferDirectory ? path.join(basePath, "index.d.ts") : basePath + ".d.ts";
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
       continue;
     }
@@ -75,7 +84,7 @@ export default function generateTsCli(opts: Options) {
       throw new Error(swaggerOutDir);
     }
     const basePath = path.dirname(path.join(srcOutDir, apiRoot, pathPath.slice(swaggerOutDir.length)));
-    const outPath = path.join(basePath, "index.ts");
+    const outPath = preferDirectory ? path.join(basePath, "index.ts") : basePath + ".ts";
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
       continue;
     }

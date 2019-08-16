@@ -4,7 +4,8 @@
   "description": "handmade Swagger code generator for TypeScript + axios",
   "main": "src/cli/index.ts",
   "scripts": {
-    "build": "NODE_ENV=production webpack -p",
+    "build": "env NODE_ENV=production webpack -p",
+    "build:debug": "webpack -d -m development",
     "watch": "webpack -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

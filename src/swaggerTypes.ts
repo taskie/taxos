@@ -1,3 +1,5 @@
+// 型定義
+
 export interface Dictionary<T> {
   [key: string]: T;
 }
@@ -52,6 +54,7 @@ export interface Operation {
 
 export type ConvertedOperation = Operation & {
   pathCode: string;
+  pathKey: string;
   dataCode: string;
   configCode?: string;
   method: string;

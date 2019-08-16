@@ -11,13 +11,15 @@ module.exports = {
     "@typescript-eslint/no-unused-vars": ["warn", { "args": "none" }],
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/prefer-interface": "off",
+    "linebreak-style": ["warn", "unix"],
     "no-use-before-define": "off",
     "no-console": process.env.NODE_ENV === "production" ? "error" : "off",
     "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off",
     "prettier/prettier": [
-      "error",
+      "warn",
       {
-        "printWidth": 120
+        "printWidth": 120,
+        "trailingComma": "all",
       }
     ],
   },
