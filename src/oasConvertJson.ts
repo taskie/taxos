@@ -1,5 +1,5 @@
 import * as oas from "./oasTypes";
-import * as taxos from "./oasTaxosTypes";
+import { TaxosExt, TaxosTsRefs } from "./oasTaxosTypes";
 
 export type ConverterContext = {
   apiRoot: string;
@@ -14,24 +14,24 @@ export const defaultContext: ConverterContext = {
 };
 
 export const convert = (ctx: Partial<ConverterContext> = defaultContext) => (
-  spec: oas.OASpecification,
-): taxos.TaxosSpecification => {
+  spec: oas.OpenAPI,
+): oas.OpenAPI<TaxosExt> => {
   const mergedCtx = { ...defaultContext, ...ctx };
   const convertPathWithCtx = convertPath(mergedCtx);
-  const result: taxos.TaxosSpecification = { ...spec, paths: {} };
+  const result: oas.OpenAPI<TaxosExt> = { ...spec, paths: {} };
   for (let [pathKey, pathValue] of Object.entries(spec.paths)) {
     result.paths[pathKey] = convertPathWithCtx(pathValue, pathKey);
   }
   result.components = convertComponents(mergedCtx)(spec.components);
-  if (spec.servers.length !== 0) {
-    result._taxos = { url: spec.servers[0].url };
+  if (spec.servers != null && spec.servers.length !== 0) {
+    result["x-taxos"] = { url: spec.servers[0].url };
   }
   return result;
 };
 
-const convertPath = (ctx: ConverterContext) => (path: oas.OAPath, pathKey: string): taxos.TaxosPath => {
-  const result: taxos.TaxosPath = { ...path };
-  let tsRefs: taxos.TaxosTsRefs = {};
+const convertPath = (ctx: ConverterContext) => (path: oas.PathItem, pathKey: string): oas.PathItem<TaxosExt> => {
+  const result: oas.PathItem<TaxosExt> = { ...path };
+  let tsRefs: TaxosTsRefs = {};
   const convertOperationWithCtx = convertOperation(ctx)(pathKey);
   for (let [operationKey, operationValue] of Object.entries(path)) {
     if (operationKey !== "get" && operationKey !== "post") {
@@ -42,11 +42,11 @@ const convertPath = (ctx: ConverterContext) => (path: oas.OAPath, pathKey: strin
     }
     const newOperation = convertOperationWithCtx(operationValue, operationKey);
     result[operationKey] = newOperation;
-    if (newOperation._taxos != null) {
-      Object.assign(tsRefs, newOperation._taxos.tsRefs);
+    if (newOperation["x-taxos"] != null) {
+      Object.assign(tsRefs, newOperation["x-taxos"].tsRefs);
     }
   }
-  result._taxos = { tsRefs };
+  result["x-taxos"] = { tsRefs };
   return result;
 };
 
@@ -57,35 +57,42 @@ function capitalize(s: string): string {
   return s[0].toUpperCase() + s.slice(1);
 }
 
+const allowedMimeTypes = ["application/json", "multipart/form-data", "application/x-www-form-urlencoded"];
+
 const convertOperation = (ctx: ConverterContext) => (pathKey: string) => (
-  operation: oas.OAOperation,
+  operation: oas.Operation,
   operationKey: string,
-): taxos.TaxosOperation => {
+): oas.Operation<TaxosExt> => {
   const convertResponseWithCtx = convertResponse(ctx);
   const findRefsFromPropertyWithCtx = findRefsFromProperty(ctx);
   const convertPropertyToTsTypeWithCtx = convertPropertyToTsType(ctx);
   const capitalizedOperationId = capitalize(operation.operationId);
   const capitalizedMethod = capitalize(operationKey);
   const methodSafe = operationKey === "delete" ? "delete_" : operationKey;
-  const responses: oas.Dictionary<taxos.TaxosResponse> = {};
-  const tsRefs: taxos.TaxosTsRefs = {
+  const responses: oas.Dictionary<oas.Response<TaxosExt>> = {};
+  const tsRefs: TaxosTsRefs = {
     apiContext: `${ctx.packageRoot}/${ctx.apiRoot}/${ctx.apiName}/utils/apiContext`,
   };
   {
     for (let [respKey, respValue] of Object.entries(operation.responses)) {
       responses[respKey] = convertResponseWithCtx(respValue, respKey);
-      for (let [mimeType, content] of Object.entries(responses[respKey].content)) {
-        if (mimeType === "application/json" && content.schema != null) {
+      if (responses[respKey].content == null) {
+        continue;
+      }
+      for (let mimeType of allowedMimeTypes) {
+        const content = responses[respKey].content[mimeType];
+        if (content != null && content.schema != null) {
           Object.assign(tsRefs, findRefsFromPropertyWithCtx(content.schema));
+          break;
         }
       }
     }
   }
 
-  const parameters: taxos.TaxosParameter[] = [];
+  const parameters: oas.Parameter<TaxosExt>[] = [];
   const exists = { path: false, query: false, body: false, formData: false };
 
-  let data: { required: boolean; tsType: string } | undefined = undefined;
+  let data: oas.Parameter & { required: boolean; tsType: string } | undefined = undefined;
   if (operation.parameters != null) {
     for (let parameter of operation.parameters) {
       (exists as any)[parameter.in] = true;
@@ -106,7 +113,19 @@ const convertOperation = (ctx: ConverterContext) => (pathKey: string) => (
       }
     }
   }
-  const structuredParameters: oas.Dictionary<taxos.TaxosParameter[]> = {};
+  if (operation.requestBody != null && operation.requestBody.content != null) {
+    for (let mimeType of allowedMimeTypes) {
+      const content = operation.requestBody.content[mimeType];
+      if (content != null && content.schema != null) {
+        if ("type" in content.schema && content.schema.type === "object") {
+          //content.schema.
+          //Object.assign(tsRefs, findRefsFromPropertyWithCtx(content.schema));
+        }
+        break;
+      }
+    }
+  }
+  const structuredParameters: oas.Dictionary<oas.Parameter<TaxosExt>[]> = {};
   for (let parameter of parameters) {
     structuredParameters[parameter.in] = structuredParameters[parameter.in] || [];
     structuredParameters[parameter.in].push(parameter);
@@ -130,8 +149,8 @@ const convertOperation = (ctx: ConverterContext) => (pathKey: string) => (
   }
   let canSendRequestBody = operationKey === "post" || operationKey === "put" || operationKey === "patch";
 
-  const result: taxos.TaxosOperation = { ...operation, responses, parameters };
-  result._taxos = {
+  const result: oas.Operation<TaxosExt> = { ...operation, responses, parameters };
+  result["x-taxos"] = {
     pathCode,
     pathKey,
     dataCode,
@@ -149,31 +168,38 @@ const convertOperation = (ctx: ConverterContext) => (pathKey: string) => (
   return result;
 };
 
-const convertResponse = (ctx: ConverterContext) => (resp: oas.OAResponse, respKey: string): taxos.TaxosResponse => {
+const convertResponse = (ctx: ConverterContext) => (resp: oas.Response, respKey: string): oas.Response<TaxosExt> => {
   let tsType: string | undefined = undefined;
-  for (let [mimeType, content] of Object.entries(resp.content)) {
-    if (mimeType === "application/json" && content.schema != null) {
-      tsType = convertPropertyToTsType(ctx)(content.schema);
+  if (resp.content != null) {
+    for (let [mimeType, content] of Object.entries(resp.content)) {
+      if (mimeType === "application/json" && content.schema != null) {
+        tsType = convertPropertyToTsType(ctx)(content.schema);
+      }
     }
   }
-  return { ...resp, _taxos: { tsType } };
+  const isDefault = respKey === "default";
+  return { ...resp, "x-taxos": { tsType, isDefault } };
 };
 
-const convertComponents = (ctx: ConverterContext) => (comp: oas.OAComponents): taxos.TaxosComponents => {
+const convertComponents = (ctx: ConverterContext) => (comp: oas.Components): oas.Components<TaxosExt> => {
   const convertSchemaWithCtx = convertSchema(ctx);
-  const result: taxos.TaxosComponents = { ...comp, schemas: {} };
+  const result: oas.Components<TaxosExt> = { ...comp, schemas: {} };
   for (let [schemaKey, schemaValue] of Object.entries(comp.schemas)) {
     result.schemas[schemaKey] = convertSchemaWithCtx(schemaValue, schemaKey);
   }
   return result;
 };
 
-const convertSchema = (ctx: ConverterContext) => (schema: oas.OASchema, schemaKey: string): taxos.TaxosSchema => {
-  const properties: oas.Dictionary<taxos.TaxosProperty> = {};
+const convertSchema = (ctx: ConverterContext) => (schema: oas.Schema, schemaKey: string): oas.Schema<TaxosExt> => {
+  const properties: oas.Dictionary<oas.Property<TaxosExt>> = {};
   const convertPropertyWithCtx = convertProperty(ctx);
   const findRefsFromPropertyWithCtx = findRefsFromProperty(ctx);
-  const tsRefs: taxos.TaxosTsRefs = {};
-  if (schema.properties != null) {
+  const tsRefs: TaxosTsRefs = {};
+  let items: oas.Property<TaxosExt> | undefined = undefined;
+  if (schema.items != null) {
+    items = convertProperty(ctx)(schema.items);
+    Object.assign(tsRefs, findRefsFromPropertyWithCtx(schema.items));
+  } else if (schema.properties != null) {
     for (let [propKey, propValue] of Object.entries(schema.properties)) {
       properties[propKey] = convertPropertyWithCtx(propValue);
       Object.assign(tsRefs, findRefsFromPropertyWithCtx(propValue));
@@ -183,7 +209,8 @@ const convertSchema = (ctx: ConverterContext) => (schema: oas.OASchema, schemaKe
   return {
     ...schema,
     properties,
-    _taxos: {
+    items,
+    "x-taxos": {
       key: schemaKey,
       tsRefs,
     },
@@ -193,8 +220,8 @@ const convertSchema = (ctx: ConverterContext) => (schema: oas.OASchema, schemaKe
 const removeComponentsSchemasPath = (s: string) => s.replace(/^#\/components\/schemas\//, "");
 
 const findRefsFromProperty = (ctx: ConverterContext) => {
-  const go = (property: oas.OAProperty): oas.Dictionary<string> => {
-    const tsRefs: taxos.TaxosTsRefs = {};
+  const go = (property: oas.Property): oas.Dictionary<string> => {
+    const tsRefs: TaxosTsRefs = {};
     if (property == null) {
       return tsRefs;
     }
@@ -220,13 +247,13 @@ const findRefsFromProperty = (ctx: ConverterContext) => {
   return go;
 };
 
-const convertProperty = (ctx: ConverterContext) => (property: oas.OAProperty): taxos.TaxosProperty => {
+const convertProperty = (ctx: ConverterContext) => (property: oas.Property): oas.Property<TaxosExt> => {
   const tsType = convertPropertyToTsType(ctx)(property);
-  return { ...property, _taxos: { tsType } };
+  return { ...property, "x-taxos": { tsType } };
 };
 
 const convertPropertyToTsType = (ctx: ConverterContext) => {
-  const go = (property: oas.OAProperty): string => {
+  const go = (property: oas.Property): string => {
     if (property == null) {
       return "any";
     }

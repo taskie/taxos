@@ -1,0 +1,53 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import * as axios from "axios";
+import { APIContext } from "../../utils/types";
+
+const baseURL = "{{{ url }}}";
+
+const buildClient = (baseURL: string) => (config: axios.AxiosRequestConfig): axios.AxiosInstance => axios.default.create({ baseURL, ...config });
+
+const defaultClient = buildClient(baseURL)({});
+
+export const apiContext: APIContext = {
+  baseURL,
+  defaultClient,
+  buildClient(config: axios.AxiosRequestConfig): axios.AxiosInstance {
+    return buildClient(this.baseURL)(config);
+  },
+  rebuildDefaultClient(config: axios.AxiosRequestConfig) {
+    this.defaultClient = this.buildClient(config);
+    if (this.onRebuildDefaultClient != null) {
+      this.onRebuildDefaultClient(this);
+    }
+  },
+  onRebuildDefaultClient: undefined as ((ctx: APIContext) => void) | undefined,
+  request(
+    url: string,
+    method: string,
+    data: any,
+    config: axios.AxiosRequestConfig,
+    client?: axios.AxiosInstance,
+  ): Promise<any> {
+    const myClient = client != null ? client : this.defaultClient;
+    return new Promise((resolve, reject) => {
+      myClient
+        .request({ url, method, data, ...config })
+        .then(resp => {
+          const { status, data } = resp;
+          resolve({ status, data, raw: resp });
+        })
+        .catch(err => {
+          const resp = err.response;
+          if (resp != null) {
+            const { status, data } = resp;
+            reject({ error: err, response: { status, data, raw: resp } });
+          } else {
+            reject({ error: err });
+          }
+        });
+    });
+  },
+};
+
+export default apiContext;

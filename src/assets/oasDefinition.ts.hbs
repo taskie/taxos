@@ -1,0 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+{{#each x-taxos.tsRefs}}
+import {{{ @key }}} from "{{{ this }}}";
+{{/each}}
+
+{{#if description}}/** {{ description }} */{{/if}}
+{{#if items}}
+export type {{{ x-taxos.key }}} = {{{ items.x-taxos.tsType }}}[];
+{{/if}}
+{{#unless items}}
+export default interface {{{ x-taxos.key }}} {
+  {{#each properties}}
+    {{#if description}}/** {{ description }} */{{/if}}
+    {{{ @key }}}: {{{ x-taxos.tsType }}};
+  {{/each}}
+}
+{{/unless}}

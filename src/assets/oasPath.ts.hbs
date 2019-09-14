@@ -1,0 +1,62 @@
+/* eslint-disable @typescript-eslint/no-empty-interface */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import * as axios from "axios";
+{{#each x-taxos.tsRefs}}
+import {{{ @key }}} from "{{{ this }}}";
+{{/each}}
+
+{{#each this}}
+{{#if x-taxos}}
+  export interface {{ x-taxos.capitalizedMethod }}Params {
+    {{#each x-taxos.structuredParameters}}
+      {{{@key}}}: { {{#each this}}
+        {{#if description}}/** {{ description }} */{{/if}}
+        {{{ name }}}{{#unless required}}?{{/unless}}: {{{ tsType }}};
+      {{/each}} };
+    {{/each}}
+    {{#if x-taxos.data}}
+      {{#if x-taxos.data.description}}/** {{ x-taxos.data.description }} */{{/if}}
+      data{{#unless x-taxos.data.required}}?{{/unless}}: {{{ x-taxos.data.tsType }}};
+    {{/if}}
+  }
+
+  export type {{ x-taxos.capitalizedMethod }}Response =
+  {{#each responses}}
+  | {
+    {{#if description}}/** {{ description }} */{{/if}}
+    status: {{#if x-taxos.isDefault}}number{{/if}}{{#unless x-taxos.isDefault}}{{{ @key }}}{{/unless}},
+    {{#if x-taxos.tsType}}
+    data: {{{ x-taxos.tsType }}},
+    {{/if}}
+    raw: axios.AxiosResponse,
+  }
+  {{/each}}
+
+  export const generate{{{ x-taxos.capitalizedMethod }}}Config = (params: {{{ x-taxos.capitalizedMethod }}}Params): axios.AxiosRequestConfig => ({
+    headers: {
+      {{#if x-taxos.structuredParameters.header}}headers: params.header,{{/if}}
+      "content-type": "application/json",
+    },
+    {{#if x-taxos.configCode}}...{{{ x-taxos.configCode }}},{{/if}}
+  });
+
+  {{#if summary}}/**
+  * {{ summary }}{{#if description}}
+  *
+  * {{ description }}{{/if}}{{#if deprecated}}
+  *
+  * @deprecated{{/if}}
+  */{{/if}}
+  export const {{ x-taxos.methodSafe }} = Object.assign(
+    (
+      params: {{{ x-taxos.capitalizedMethod }}}Params,
+      config: axios.AxiosRequestConfig = {},
+      client: axios.AxiosInstance = apiContext.defaultClient
+    ): Promise<{{{ x-taxos.capitalizedMethod }}}Response> =>
+      apiContext.request({{{ x-taxos.pathCode }}}, "{{ x-taxos.method }}", {{{ x-taxos.dataCode }}}, { ...generate{{{ x-taxos.capitalizedMethod }}}Config(params), ...config }, client),
+      { taxos: { path: "{{ x-taxos.pathKey }}", method: "{{ x-taxos.method }}" } },
+  );
+{{/if}}
+{{/each}}

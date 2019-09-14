@@ -2,6 +2,7 @@ import * as commander from "commander";
 import * as fs from "fs";
 
 import oasConvertJsonCli from "./oasConvertJsonCli";
+import oasGenerateTsCli from "./oasGenerateTsCli";
 import convertJsonCli from "./convertJsonCli";
 import generateTsCli from "./generateTsCli";
 
@@ -30,7 +31,13 @@ if (program.config != null) {
 }
 
 if (config.oas) {
-  oasConvertJsonCli(config);
+  if (config.mode === "json" || config.mode === "both") {
+    oasConvertJsonCli(config);
+  }
+
+  if (config.mode === "ts" || config.mode === "both") {
+    oasGenerateTsCli(config);
+  }
 } else {
   if (config.mode === "json" || config.mode === "both") {
     convertJsonCli(config);
