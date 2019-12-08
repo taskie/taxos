@@ -13,12 +13,12 @@ import {{{ @key }}} from "{{{ this }}}";
     {{#each x-taxos.structuredParameters}}
       {{{@key}}}: { {{#each this}}
         {{#if description}}/** {{ description }} */{{/if}}
-        {{{ name }}}{{#unless required}}?{{/unless}}: {{{ tsType }}};
+        {{{ name }}}{{#unless required}}?{{/unless}}: {{{ x-taxos.tsType }}};
       {{/each}} };
     {{/each}}
-    {{#if x-taxos.data}}
-      {{#if x-taxos.data.description}}/** {{ x-taxos.data.description }} */{{/if}}
-      data{{#unless x-taxos.data.required}}?{{/unless}}: {{{ x-taxos.data.tsType }}};
+    {{#if x-taxos.requestData}}
+      {{#if x-taxos.requestData.description}}/** {{ x-taxos.requestData.description }} */{{/if}}
+      data{{#unless x-taxos.requestData.required}}?{{/unless}}: {{{ x-taxos.requestData.x-taxos.tsType }}};
     {{/if}}
   }
 

@@ -10,9 +10,9 @@ export type {{{ x-taxos.key }}} = {{{ items.x-taxos.tsType }}}[];
 {{/if}}
 {{#unless items}}
 export default interface {{{ x-taxos.key }}} {
-  {{#each properties}}
+  {{#each x-taxos.tsProperties}}
     {{#if description}}/** {{ description }} */{{/if}}
-    {{{ @key }}}: {{{ x-taxos.tsType }}};
+    {{{ @key }}}: {{{ tsType }}};
   {{/each}}
 }
 {{/unless}}

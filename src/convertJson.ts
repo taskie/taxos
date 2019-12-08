@@ -21,17 +21,17 @@ export function convert(
   const mergedContext = { ...defaultContext, ...ctx };
   const baseURL = buildBaseURL(o, mergedContext);
   const result: swaggerTypes.ConvertedSwagger = { ...o, baseURL, paths: {}, definitions: {} };
-  for (let [pathKey, pathValue] of Object.entries(o.paths)) {
+  for (const [pathKey, pathValue] of Object.entries(o.paths)) {
     result.paths[pathKey] = convertPath(pathValue, pathKey, o.basePath, mergedContext);
   }
-  for (let [defKey, defValue] of Object.entries(o.definitions)) {
+  for (const [defKey, defValue] of Object.entries(o.definitions)) {
     result.definitions[defKey] = convertDefinition(defValue, defKey, mergedContext);
   }
   return result;
 }
 
 function buildBaseURL(o: swaggerTypes.Swagger, ctx: ConverterContext): string {
-  let { host, schemes } = o;
+  const { host, schemes } = o;
   let basePath = o.basePath != null ? o.basePath : "/";
   if (basePath[0] != "/") {
     basePath = "/" + basePath;
@@ -59,7 +59,7 @@ function convertPath(
     operations: {},
     tsRefs: {},
   };
-  for (let [epKey, epValue] of Object.entries(pathValue)) {
+  for (const [epKey, epValue] of Object.entries(pathValue)) {
     const epResult = convertOperation(epValue, epKey, pathKey, ctx);
     pathResult.operations[epKey] = epResult;
     pathResult.tsRefs = { ...pathResult.tsRefs, ...epResult.tsRefs };
@@ -87,7 +87,7 @@ function convertOperation(
   let tsRefs: swaggerTypes.Dictionary<string> = {
     apiContext: `${ctx.packageRoot}/${ctx.apiRoot}/${ctx.apiName}/utils/apiContext`,
   };
-  for (let [respKey, respValue] of Object.entries(epValue.responses)) {
+  for (const [respKey, respValue] of Object.entries(epValue.responses)) {
     responses[respKey] = convertResponse(respValue, respKey, ctx);
     tsRefs = { ...tsRefs, ...findRefsFromProperty(responses[respKey].schema, ctx) };
   }
@@ -95,7 +95,7 @@ function convertOperation(
   const exists = { path: false, query: false, body: false, formData: false };
   const parameterExists = exists;
   let data: { required: boolean; tsType: string } | undefined = undefined;
-  for (let parameter of epValue.parameters) {
+  for (const parameter of epValue.parameters) {
     (exists as any)[parameter.in] = true;
     if (parameter.in === "body") {
       data = {
@@ -114,7 +114,7 @@ function convertOperation(
     }
   }
   const structuredParameters: swaggerTypes.Dictionary<swaggerTypes.ConvertedParameter[]> = {};
-  for (let parameter of parameters) {
+  for (const parameter of parameters) {
     structuredParameters[parameter.in] = structuredParameters[parameter.in] || [];
     structuredParameters[parameter.in].push(parameter);
   }
@@ -134,7 +134,7 @@ function convertOperation(
   if (exists.query) {
     configCode = `{ params: params.query }`;
   }
-  let canSendRequestBody = epKey === "post" || epKey === "put" || epKey === "patch";
+  const canSendRequestBody = epKey === "post" || epKey === "put" || epKey === "patch";
   return {
     ...epValue,
     pathCode,
@@ -173,7 +173,7 @@ function convertDefinition(
   const properties: swaggerTypes.Dictionary<swaggerTypes.ConvertedProperty> = {};
   let tsRefs: swaggerTypes.Dictionary<string> = {};
   if (definition.properties != null) {
-    for (let [propKey, propValue] of Object.entries(definition.properties)) {
+    for (const [propKey, propValue] of Object.entries(definition.properties)) {
       properties[propKey] = convertProperty(propValue, ctx);
       tsRefs = {
         ...tsRefs,

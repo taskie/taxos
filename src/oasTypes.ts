@@ -16,7 +16,7 @@ export type OpenAPI<X = {}> = {
 export type Info<X = {}> = {
   title: string;
   description?: string;
-  termsOfService?:	string;
+  termsOfService?: string;
   contact?: Contact<X>;
   license?: License<X>;
   version: string;
@@ -54,7 +54,7 @@ export type Components<X = {}> = {
   header?: Dictionary<Header<X> | Reference>;
   securitySchemes?: Dictionary<SecurityScheme<X> | Reference>;
   links?: Dictionary<Link<X> | Reference>;
-  callbacks?: Dictionary<Callback<X> | Reference>;  
+  callbacks?: Dictionary<Callback<X> | Reference>;
 } & (X extends { components: infer T } ? T : {});
 
 export type Paths<X = {}> = Dictionary<PathItem<X>> & (X extends { paths: infer T } ? T : {});
@@ -72,7 +72,7 @@ export type PathItem<X = {}> = {
   patch?: Operation<X>;
   trace?: Operation<X>;
   servers?: Server<X>[];
-  parameters: (Parameter<X> | Reference)[]
+  parameters: (Parameter<X> | Reference)[];
 } & (X extends { pathItem: infer T } ? T : {});
 
 export type Operation<X = {}> = {
@@ -84,7 +84,7 @@ export type Operation<X = {}> = {
   parameters?: (Parameter<X> | Reference)[];
   requestBody?: RequestBody<X> | Reference;
   responses: Responses<X>;
-  callbacks?: Dictionary<Callback<X> | Reference>;  
+  callbacks?: Dictionary<Callback<X> | Reference>;
   deprecated?: boolean;
   security?: SecurityRequirement<X>[];
   servers?: Server<X>[];
@@ -137,19 +137,18 @@ export type Encoding<X = {}> = {
 } & (X extends { encoding: infer T } ? T : {});
 
 export type Responses<X = {}> = {
-  default: Response<X> | Reference;
-} & Dictionary<Response<X> | Reference>
-& (X extends { responses: infer T } ? T : {});
+  default?: Response<X> | Reference;
+} & Dictionary<Response<X> | Reference> &
+  (X extends { responses: infer T } ? T : {});
 
 export type Response<X = {}> = {
   description: string;
-  headers?: Dictionary<Header<X> | Reference>
+  headers?: Dictionary<Header<X> | Reference>;
   content?: Dictionary<MediaType<X>>;
   links?: Dictionary<Link<X> | Reference>;
 } & (X extends { response: infer T } ? T : {});
 
-export type Callback<X = {}> = Dictionary<PathItem<X>>
-  & (X extends { callback: infer T } ? T : {});
+export type Callback<X = {}> = Dictionary<PathItem<X>> & (X extends { callback: infer T } ? T : {});
 
 export type Example<X = {}> = {
   summary?: string;
@@ -251,27 +250,31 @@ type SecuritySchemeBase<X> = {
   description?: string;
 } & (X extends { securityScheme: infer T } ? T : {});
 
-type SecuritySchemeVariant<X> = {
-  type: "apiKey",
-  name: string,
-  in: "query" | "header" | "cookie",
-} | {
-  type: "http",
-  scheme: string,
-  bearerFormat?: string,
-} | {
-  type: "oauth2",
-  flows: OAuthFlows<X>,
-} | {
-  type: "openIdConnect",
-  openIdConnectUrl: string,
-};
+type SecuritySchemeVariant<X> =
+  | {
+      type: "apiKey";
+      name: string;
+      in: "query" | "header" | "cookie";
+    }
+  | {
+      type: "http";
+      scheme: string;
+      bearerFormat?: string;
+    }
+  | {
+      type: "oauth2";
+      flows: OAuthFlows<X>;
+    }
+  | {
+      type: "openIdConnect";
+      openIdConnectUrl: string;
+    };
 
 export type OAuthFlows<X = {}> = {
-  implicit?: OAuthFlow<X>,
-  password?: OAuthFlow<X>,
-  clientCredentials?: OAuthFlow<X>,
-  authorizationCode?: OAuthFlow<X>,
+  implicit?: OAuthFlow<X>;
+  password?: OAuthFlow<X>;
+  clientCredentials?: OAuthFlow<X>;
+  authorizationCode?: OAuthFlow<X>;
 } & (X extends { oauthFlows: infer T } ? T : {});
 
 export type OAuthFlow<X = {}> = {

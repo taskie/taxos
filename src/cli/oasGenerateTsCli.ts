@@ -11,7 +11,6 @@ import {
   generateApiContextTs,
   generateTypesTs,
 } from "@/oasGenerateTs";
-import { TaxosServer } from "@/oasTaxosTypes";
 
 interface Options {
   apiRoot: string;
@@ -34,7 +33,7 @@ const utilMapperGenerator = (apiName: string, apiSpec: { url: string }, src: str
   [path.join(src, apiRoot, apiName, "utils", "apiContext.ts")]: () => generateApiContextTs(apiSpec),
 });
 
-export default function generateTsCli(opts: Options) {
+export default async function generateTsCli(opts: Options) {
   const { apiRoot, apiName, outPathFilter: opf, swaggerOutDir: swaggerOut, srcOutDir: src } = opts;
   let swaggerOutDir = swaggerOut != null ? swaggerOut : "swagger";
   const srcOutDir = src != null ? src : path.join("src");
@@ -47,7 +46,7 @@ export default function generateTsCli(opts: Options) {
   const utilMapper = utilMapperGenerator(apiName, apiSpec, srcOutDir, apiRoot);
   const preferDirectory = !!opts.preferDirectory;
 
-  for (let [outPath, generator] of Object.entries(utilMapper)) {
+  for (const [outPath, generator] of Object.entries(utilMapper)) {
     if (outPathFilter != null && !outPathFilter.has(outPath)) {
       continue;
     }
@@ -62,7 +61,7 @@ export default function generateTsCli(opts: Options) {
   }
 
   const defPaths = glob.sync(path.join(swaggerOutDir, apiName, "definitions", "**", "spec.json"));
-  for (let defPath of defPaths) {
+  for (const defPath of defPaths) {
     if (defPath.indexOf(swaggerOutDir) !== 0) {
       throw new Error(swaggerOutDir);
     }
@@ -79,7 +78,7 @@ export default function generateTsCli(opts: Options) {
   }
 
   const pathPaths = glob.sync(path.join(swaggerOutDir, apiName, "paths", "**", "spec.json"));
-  for (let pathPath of pathPaths) {
+  for (const pathPath of pathPaths) {
     if (pathPath.indexOf(swaggerOutDir) !== 0) {
       throw new Error(swaggerOutDir);
     }

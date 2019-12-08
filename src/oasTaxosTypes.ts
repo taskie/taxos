@@ -1,26 +1,28 @@
-import { Dictionary, OpenAPI, Parameter } from "./oasTypes";
+import { Dictionary, Parameter, MediaType } from "./oasTypes";
 
 export type TaxosTsRefs = Dictionary<string>;
 
 export type TaxosExt = {
   openAPI: {
-    "x-taxos": {
+    "x-taxos"?: {
       url?: string;
     };
   };
   schema: {
-    "x-taxos": {
-      key: string;
-      tsRefs: TaxosTsRefs;
-    }
+    "x-taxos"?: {
+      key?: string;
+      tsType: string;
+      tsRefs?: TaxosTsRefs;
+      tsProperties?: Dictionary<{ name: string; tsType: string }>;
+    };
   };
   pathItem: {
-    "x-taxos": {
+    "x-taxos"?: {
       tsRefs: TaxosTsRefs;
-    }
+    };
   };
   operation: {
-    "x-taxos": {
+    "x-taxos"?: {
       pathCode: string;
       pathKey: string;
       dataCode: string;
@@ -30,18 +32,32 @@ export type TaxosExt = {
       capitalizedOperationId: string;
       capitalizedMethod: string;
       canSendRequestBody: boolean;
-      data?: {
-        required: boolean;
-        tsType: string;
-      };
+      requestData?: MediaType<TaxosExt>;
       structuredParameters: Dictionary<Parameter<TaxosExt>[]>;
       parameterExists: Dictionary<boolean>;
       tsRefs: TaxosTsRefs;
-    }
+    };
+  };
+  parameter: {
+    "x-taxos"?: {
+      tsType: string;
+      tsRefs: TaxosTsRefs;
+    };
+  };
+  requestBody: {
+    "x-taxos"?: {
+      tsRefs: TaxosTsRefs;
+    };
+  };
+  mediaType: {
+    "x-taxos"?: {
+      tsType: string;
+      tsRefs: TaxosTsRefs;
+    };
   };
   response: {
-    "x-taxos": {
-      tsType?: string;
+    "x-taxos"?: {
+      tsRefs: TaxosTsRefs;
       isDefault?: boolean;
     };
   };

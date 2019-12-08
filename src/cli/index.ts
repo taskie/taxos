@@ -23,6 +23,7 @@ let config = {
   preferDirectory: true,
   useApiBasePath: false,
   packageRoot: "@",
+  swagger2openapiEnabled: false,
 };
 
 if (program.config != null) {
@@ -31,13 +32,15 @@ if (program.config != null) {
 }
 
 if (config.oas) {
-  if (config.mode === "json" || config.mode === "both") {
-    oasConvertJsonCli(config);
-  }
+  (async () => {
+    if (config.mode === "json" || config.mode === "both") {
+      await oasConvertJsonCli(config);
+    }
 
-  if (config.mode === "ts" || config.mode === "both") {
-    oasGenerateTsCli(config);
-  }
+    if (config.mode === "ts" || config.mode === "both") {
+      await oasGenerateTsCli(config);
+    }
+  })();
 } else {
   if (config.mode === "json" || config.mode === "both") {
     convertJsonCli(config);
